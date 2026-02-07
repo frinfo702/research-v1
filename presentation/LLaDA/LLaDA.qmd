@@ -207,20 +207,20 @@ $$
 
 ## Q1. これはBERTの焼き直しですか？
 
-A. 固定mask率の表現学習ではなく、$t\sim U[0,1]$かつ最尤上界に接続した生成モデルとして設計されている点が本質的に異なります。
+A. 固定mask率の表現学習ではなく、$t\sim U[0,1]$かつ最尤上界に接続した生成モデルとして設計されている点が本質的に異なります。[^1]
 
 ## Q2. なぜreversalに強いのですか？
 
-A. 左右いずれか一方向の条件づけに固定されず、欠損復元として学習するため、方向依存バイアスが小さいと解釈できます。
+A. 左右いずれか一方向の条件づけに固定されず、欠損復元として学習するため、方向依存バイアスが小さいと解釈できます。[^2]
 
 ## Q3. 実運用で遅くないですか？
 
-A. 1トークン1stepのARと異なり、拡散step設計で品質-速度トレードオフを調整できます。論文でもsampling戦略と速度/メモリを別途分析しています。
+A. 1トークン1stepのARと異なり、拡散step設計で品質-速度トレードオフを調整できます。論文でもsampling戦略と速度/メモリを別途分析しています [^3]
 
 ---
 
 # 参考情報
 
-- Paper: Large Language Diffusion Models (Nie et al.)
-- Project: https://ml-gsai.github.io/LLaDA-demo/
-- Local source PDF: ../_papers/LargeLanguageDiffusionModels.pdf
+1. Paper: Large Language Diffusion Models (Nie et al.)
+2. Project: https://ml-gsai.github.io/LLaDA-demo/
+3. Local source PDF: ../_papers/LargeLanguageDiffusionModels.pdf
