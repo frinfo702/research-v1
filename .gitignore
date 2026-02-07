@@ -185,6 +185,8 @@ wandb_runs/
 
 # Presentation
 presentation/**/*.pptx
+presentation/_templates/~$*.pptx
+!presentation/_templates/*.pptx
 
 # Quarto generated report files
 **/*_files/

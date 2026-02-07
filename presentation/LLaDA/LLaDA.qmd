@@ -2,10 +2,6 @@
 title: "LLaDA: Large Language Diffusion Models"
 subtitle: "Autoregressive以外でLLM能力は成立するか"
 author: "Ken"
-format:
-  beamer:
-    incremental: true
-  pptx: default
 lang: ja
 ---
 

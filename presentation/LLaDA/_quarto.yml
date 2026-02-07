@@ -1,5 +1,6 @@
 project:
   title: "LLaDA"
 
-
+metadata-files:
+  - ../_common-format.yml
 

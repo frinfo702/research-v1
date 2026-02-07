@@ -1,0 +1,5 @@
+format:
+  beamer:
+    incremental: true
+  pptx:
+    reference-doc: ../_templates/pptx-reference-small.pptx
