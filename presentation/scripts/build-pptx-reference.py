@@ -79,7 +79,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output",
-        default="presentation/templates/pptx/univ-reference.pptx",
+        default="presentation/templates/pptx/ritsumeikan.pptx",
         help="Output PPTX path.",
     )
     args = parser.parse_args()

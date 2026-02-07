@@ -8,7 +8,7 @@ presentation/
 ├── README.md
 ├── templates/
 │   └── pptx/
-│       ├── univ-reference.pptx        # Quarto/Pandoc reference-doc
+│       ├── <reference-theme>.pptx        # Quarto/Pandoc reference-doc
 │       └── notes.md                   # Template notes (layouts, usage)
 ├── shared/
 │   ├── assets/

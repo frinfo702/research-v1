@@ -18,6 +18,5 @@ format:
         \makeatother
         \let\Oldincludegraphics\includegraphics
         \renewcommand{\includegraphics}[2][]{\Oldincludegraphics[width=\maxwidth,#1]{#2}}
-        
-metadata-files:
-  - ../../shared/style/_common-format.yml
+  pptx:
+    reference-doc: ../../templates/pptx/ritsumeikan.pptx
