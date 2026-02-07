@@ -1,6 +1,38 @@
 # Presentation
 
 This directory is for presentation materials.
+We plan to keep presentation materials in this structure going forward:
+
+```text
+presentation/
+├── README.md
+├── templates/
+│   └── pptx/
+│       ├── univ-reference.pptx        # Quarto/Pandoc reference-doc
+│       └── notes.md                   # Template notes (layouts, usage)
+├── shared/
+│   ├── assets/
+│   │   ├── logo/                      # University/lab logos, background assets
+│   │   └── fonts/                     # If needed (check license requirements)
+│   ├── figures/
+│   │   ├── src/                       # Editable sources (drawio, figma exports, .ai, etc.)
+│   │   └── export/                    # Slide-ready exports (pdf/png/svg)
+│   └── style/
+│       ├── brand.yml                  # Optional shared brand colors
+│       └── csl/                       # Citation style if used in slides
+├── decks/
+│   ├── 2026-02-lab-seminar/
+│   │   ├── slide.qmd                  # Quarto source
+│   │   ├── slide.pptx                 # Generated output (commit policy TBD)
+│   │   ├── data/                      # Per-deck data
+│   │   ├── figures/                   # Per-deck figures
+│   │   └── notes/                     # Speaker notes, Q&A
+│   └── 2026-03-conference/
+│       └── ...
+├── scripts/
+│   └── export_figures.sh              # Optional batch export script
+└── build/                             # Output for all decks (if used)
+```
 
 ## Configuration structure
 
