@@ -4,16 +4,16 @@ This directory is for presentation materials.
 
 ## Configuration structure
 
-- Common format settings are managed in `presentation/_common-format.yml`.
+- Common format settings are managed in `presentation/shared/style/_common-format.yml`.
 - Each project keeps local settings in its own `_quarto.yml`.
 - Quarto does not automatically inherit parent `_quarto.yml` from nested projects, so each project loads common settings via:
 
 ```yaml
 metadata-files:
-  - ../_common-format.yml
+  - ../../shared/style/_common-format.yml
 ```
 
-- `pptx` font sizing itself is controlled through `presentation/_pptx-reference.yml`.
+- `pptx` font sizing itself is controlled through `presentation/shared/style/_pptx-reference.yml`.
 - Generate the reference PPTX after updating the YAML:
 
 ```bash

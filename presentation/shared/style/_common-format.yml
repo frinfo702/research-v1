@@ -1,0 +1,5 @@
+format:
+  beamer:
+    incremental: true
+  pptx:
+    reference-doc: ../../templates/pptx/univ-reference.pptx

@@ -74,12 +74,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--config",
-        default="presentation/_pptx-reference.yml",
+        default="presentation/shared/style/_pptx-reference.yml",
         help="Path to YAML config file.",
     )
     parser.add_argument(
         "--output",
-        default="presentation/_templates/pptx-reference-small.pptx",
+        default="presentation/templates/pptx/univ-reference.pptx",
         help="Output PPTX path.",
     )
     args = parser.parse_args()

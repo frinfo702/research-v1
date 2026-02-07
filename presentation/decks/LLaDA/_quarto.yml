@@ -20,4 +20,4 @@ format:
         \renewcommand{\includegraphics}[2][]{\Oldincludegraphics[width=\maxwidth,#1]{#2}}
         
 metadata-files:
-  - ../_common-format.yml
+  - ../../shared/style/_common-format.yml
