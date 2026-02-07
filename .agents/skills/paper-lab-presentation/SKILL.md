@@ -19,6 +19,7 @@ Enable concise, story-driven lab presentations of papers; avoid literal translat
    - Write a 1-sentence takeaway and 3-bullet contributions.
 3. Build the story arc.
    - Use Problem -> Gap -> Idea -> How -> Evidence -> Limits -> Takeaway.
+   - Treat these labels as internal planning only. Do not copy them into audience-facing slide titles unless explicitly requested.
    - Keep every section tied to the explanation goal.
 4. Handle equations with meaning.
    - Introduce intuition before math, define variables, state assumptions, then show the equation.
@@ -32,6 +33,7 @@ Enable concise, story-driven lab presentations of papers; avoid literal translat
    - Provide slide outline (with timing) and speaking notes.
    - Include likely questions and short answers.
    - If requested, produce a Quarto .qmd slide deck (see references).
+   - Use audience-facing slide titles. Avoid meta or instruction-like titles such as "How (1)", "Evidence (2)", "1スライドでまとめ", or "研究室向けの見どころ" unless the user explicitly asks for them.
 
 ## Output Formats
 

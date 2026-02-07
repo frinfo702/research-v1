@@ -1,0 +1,230 @@
+---
+title: "LLaDA: Large Language Diffusion Models"
+subtitle: "Autoregressive以外でLLM能力は成立するか"
+author: "Ken"
+format:
+  beamer:
+    incremental: true
+  pptx: default
+lang: ja
+---
+
+# 今日の結論
+
+- 主張: LLMの中核能力は「自己回帰そのもの」ではなく、生成モデリング原理に依存する
+- 提案: LLaDAは離散拡散（masking diffusion）で8Bまで事前学習し、LLaMA3 8B級と競合
+- 意義: 非自己回帰でもin-context learning・instruction-following・スケーリングが成立
+
+::: notes
+この発表のゴールは、LLaDAの「何が新しく」「どこまで有効で」「何が未解決か」を判断できるようにすることです。
+:::
+
+---
+
+# 今日の着目点
+
+- 聴衆が説明できること
+- なぜ「ARだけがLLMの道」という前提を崩せるのか
+- LLaDAの学習目的（Eq.3, Eq.4）と推論手順（remask）の意味
+- 実験結果を、強みと制約の両方で批判的に読めること
+
+::: notes
+研究室向けなので、実装詳細よりも「理論的な筋」と「実験の妥当性」を重視します。
+:::
+
+---
+
+# なぜ自己回帰以外を検証するのか
+
+- 通説: 大規模言語モデルの能力は自己回帰因子分解に本質的に依存する
+- 問い: 本当にARでなければ、スケール時の能力は出ないのか
+- 検証方針: 8B規模の純粋な拡散言語モデルをゼロから学習して比較
+
+$$
+p(x)=\prod_{i=1}^{L} p(x_i\mid x_{<i})
+$$
+
+::: notes
+上式は現在の標準的AR表現です。LLaDAはこれを直接使わず、別の生成過程で同等能力を目指します。
+:::
+
+---
+
+# 先行研究で未検証だった点
+
+- 離散拡散LMは先行研究があるが、多くは小規模（GPT-2級）
+- 「大規模で本当に競合するか」が未検証
+- 既存のmasked生成系（例: MaskGIT系）は最尤との理論接続が弱い設定もある
+
+::: notes
+著者は「スケール検証」と「最尤に接続された目的関数」の2点を差別化点として強調しています。
+:::
+
+---
+
+# LLaDAの基本アイデア
+
+- Forward: 各トークンを確率$t$で独立にマスク（$t\sim U[0,1]$）
+- Reverse: マスクトークンを同時予測して段階的に復元
+- 予測器: Causal maskなしのTransformer（全文脈を参照）
+
+**直観**
+
+- ARは「左から右へ1トークンずつ」
+- LLaDAは「部分欠損列の穴埋めを反復」
+- 双方向条件づけが自然に入る
+
+---
+
+# 学習目的関数のポイント
+
+学習損失（masked tokenのみにCE）:
+
+$$
+\mathcal{L}(\theta)= -\mathbb{E}_{t,x_0,x_t}\left[\frac{1}{t}\sum_{i=1}^{L}\mathbf{1}[x_t^i=M]\log p_\theta(x_0^i\mid x_t)\right]
+$$
+
+理論的性質:
+
+$$
+-\mathbb{E}_{p_{\text{data}}(x_0)}[\log p_\theta(x_0)] \le \mathcal{L}(\theta)
+$$
+
+- 右辺最小化は、対数尤度最大化の上界最適化として解釈できる
+- 論文の主張では、この最尤原理との接続がスケーリングの鍵
+
+::: notes
+重要点は1/t重みです。論文は、この項が理論整合性に効くと述べています。
+:::
+
+---
+
+# 学習と推論の流れ
+
+- Pre-train: 2.3T tokensで1B/8Bを学習（seq length 4096、Warmup-Stable-Decay）
+- SFT: 4.5M prompt-response pairsで、prompt固定・response側のみマスク
+- Sampling: 完全マスク応答から開始し、複数stepで同時復元
+- Sampling時は低信頼トークンをremask（low-confidence remasking）
+
+::: notes
+推論step数は品質と速度のトレードオフのつまみになります。
+:::
+
+---
+
+# スケーリング検証
+
+- 比較: 同一データで学習した著者実装ARM baselineとLLaDA
+- 指標: 事前学習FLOPsを横軸に6タスクで評価
+- 観測: 全体トレンドはARMと競合
+- 観測: MMLU/GSM8KではLLaDA側が強く伸びる領域あり
+- 含意: 「スケールするとARのみが有利」という仮説は弱まる
+
+::: notes
+ここはFigure 3の読みどころです。点の上下より、スケールに伴う傾向の比較が重要です。
+:::
+
+---
+
+# 8Bベンチマーク結果（Base）
+
+- LLaDA 8B Base vs LLaMA2 7B Base
+- 15標準タスクの大半で上回る
+- LLaDA 8B Base vs LLaMA3 8B Base
+- 全体として競合、特に数学・中国語系で強い項目あり
+- 例（論文Table 1）
+- GSM8K: 70.3 (LLaDA) vs 48.7 (LLaMA3 8B Base)
+- MATH: 31.4 vs 16.0
+- HumanEval: 35.4 vs 34.8
+
+::: notes
+比較対象の学習トークン量が異なる点（例: LLaMA3は15T）を必ず併記して過剰解釈を避けます。
+:::
+
+---
+
+# SFT後の変化と対話能力
+
+- LLaDAはSFTのみ（RLなし）でinstruction-followingを改善
+- 多言語・マルチターン対話のケーススタディを提示
+- 一部指標はLLaMA3 Instructに劣るが、差が小さい項目もある
+- 含意: 非ARでも実用的な対話能力の獲得が可能
+
+---
+
+# Reversal Curseに対する結果
+
+- タスク: 中国詩の「次行生成（forward）」と「前行生成（reversal）」
+- 結果（Table 4）
+- GPT-4o: Forward 82.7 / Reversal 34.3
+- Qwen2.5-7B: 75.9 / 38.0
+- LLaDA-8B Instruct: 51.8 / 45.6
+- 解釈: LLaDAはforward最高ではないが、reversalで最良
+- 解釈: 方向バイアスが小さい生成器としての利点を示唆
+
+::: notes
+"何でも勝つ"ではなく、"勝ち方が違う"という読みが重要です。
+:::
+
+---
+
+# この論文の貢献（3点）
+
+- 8B規模の離散拡散LMをゼロから構築し、LLM主要能力の成立を実証
+- 最尤上界に基づく目的関数で、理論と実装を接続してスケール検証
+- reversal reasoningのようなAR弱点領域で有望な特性を示した
+
+---
+
+# 限界と注意点
+
+- 厳密同条件比較は$<10^{23}$ FLOPs帯に制限
+- 生成長はユーザ指定ハイパーパラメータ
+- RLアライメント未実施
+- KV cache等のシステム最適化は未整備
+- データ透明性の制約により、データ起因の差分解釈は限定的
+
+::: notes
+このスライドで「どこまで信じるか」の線引きを明確にします。
+:::
+
+---
+
+# 議論したいポイント
+
+- 理論: ARの逐次性は能力の必要条件か、それとも実装上の選好か
+- 実装: remask戦略・step数制御・CFG併用でどこまで実用速度を出せるか
+- 拡張: RLHF/RLAIFやagent系で、非ARモデルはどの挙動を示すか
+
+---
+
+# まとめ
+
+- LLaDAは「非ARでもLLM能力は成立する」を8Bで実証した重要な一歩
+- 強みは双方向性・reversal耐性・競合的スケーリング
+- ただし現時点では、整列（RL）とシステム最適化でAR陣営に未達な部分も残る
+- 結論: AR一択の前提は崩れた。次の勝負はポストトレーニングと推論最適化
+
+---
+
+# 想定Q&A
+
+## Q1. これはBERTの焼き直しですか？
+
+A. 固定mask率の表現学習ではなく、$t\sim U[0,1]$かつ最尤上界に接続した生成モデルとして設計されている点が本質的に異なります。
+
+## Q2. なぜreversalに強いのですか？
+
+A. 左右いずれか一方向の条件づけに固定されず、欠損復元として学習するため、方向依存バイアスが小さいと解釈できます。
+
+## Q3. 実運用で遅くないですか？
+
+A. 1トークン1stepのARと異なり、拡散step設計で品質-速度トレードオフを調整できます。論文でもsampling戦略と速度/メモリを別途分析しています。
+
+---
+
+# 参考情報
+
+- Paper: Large Language Diffusion Models (Nie et al.)
+- Project: https://ml-gsai.github.io/LLaDA-demo/
+- Local source PDF: ../_papers/LargeLanguageDiffusionModels.pdf

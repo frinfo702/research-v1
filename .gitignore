@@ -180,6 +180,11 @@ wandb_runs/
 
 # Quarto
 .quarto
+**/*.html
+**/~$*.pptx
+
+# Presentation
+presentation/**/*.pptx
 
 # Quarto generated report files
 **/*_files/
