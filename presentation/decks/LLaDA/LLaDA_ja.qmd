@@ -5,7 +5,7 @@ author: "後藤 健一郎"
 lang: ja
 format: 
   pptx: 
-    reference-doc: ../../templates/pptx/template.pptx
+    reference-doc: ../../templates/pptx/plain_template.pptx
 ---
 
 # 問題設定
@@ -14,7 +14,7 @@ format:
   - 左から右へトークンを逐次生成する
   - 双方向的な文脈の活用や、テキスト全体の整合性確保が構造的に困難
 - テキスト生成に拡散モデルを適用する試みはあったが、スケーラビリティに課題
-  - 連続拡散モデル (MDLM 等) はARMの約64倍の計算時間を要する
+  - 連続拡散モデルは計算が重い（e.g. 1BモデルでARM同等性能に64×）
   - 大規模化 (数十億パラメータ) での有効性が未検証だった
 
 ---
@@ -22,19 +22,19 @@ format:
 # 新規性
 
 - **離散的なマスク拡散モデル (Masked Diffusion Model; MDM)** を8Bパラメータまでスケール
-  - 2.3Tトークンで事前学習し、各種ベンチマークで **LLaMA3 8B に匹敵する性能** を達成
+  - 2.3Tトークンで事前学習し、各種ベンチマークで **LLaMA3 8B に匹敵する性能** 
 - 拡散モデルの特性を活かした強みを実証
   - **双方向モデリング**: 文脈の前後を同時に考慮した生成が可能
   - **頑健性の向上**: ARMが苦手とする逆順テキスト生成 (Reversal) タスクで GPT-4o や Qwen2.5 を上回る
-- MDM向けの **事後学習 (SFT)** 手法を提案し、指示追従能力を付与
+- MDM向けの **事後学習 (SFT)** 手法を提案し、Instruction Followingを強化
 
 ---
 
-# 核となるアイデア
+# アイデア
 
 - (a) 事前学習: トークン列をランダムにマスクし、マスクされたトークンを予測する
-- (b) 指示追従 (SFT): プロンプト部分はマスクせず、応答部分のみをマスクして学習
-- (c) 推論: 全トークンがマスクされた状態から、段階的にマスクを除去して文章を生成
+- (b) SFT: プロンプト部分はマスクせず、応答部分のみをマスクして学習
+- (c) 推論: 全トークンがマスクされた状態から、段階的にマスクを除去して文章を生成。その際、一様な確率で再度マスクする処理を加える
 
 ![LLaDAの概要](figures/overview_of_llada.png)
 
@@ -44,55 +44,57 @@ format:
 # メカニズム: 前方過程 (Forward Process)
 
 - 元のトークン列 $\mathbf{x}_0$ に対し、マスク率 $t \sim U(0,1)$ でランダムにマスクを適用
+- ある $t \in (0, 1)$ を固定したとき、各位置 $i$ について $x_t^i$ は確率 $t$  で $M$ になり、確率 $1-t$ で $x_0^i$ のまま残る
   - 各トークンは独立に確率 $t$ で `[MASK]` に置換される
   - $t = 0$: 元のトークン列（マスクなし）
   - $t = 1$: 全トークンがマスク（完全ノイズ）
-- 遷移確率: $q(\mathbf{x}_t | \mathbf{x}_0) = \prod_i q(x_t^i | x_0^i)$
-  - $q(x_t^i | x_0^i) = (1-t) \cdot \delta(x_t^i, x_0^i) + t \cdot \delta(x_t^i, [\text{MASK}])$
+- "diffusion"とついているが、各ステップでガウシアンノイズを足していく連続拡散モデル（DDPM等）とは異なる
+  - Forward Processが離散的
 
 ---
 
 # メカニズム: 逆過程 (Reverse Process)
 
 - ニューラルネットワーク $p_\theta(\mathbf{x}_0 | \mathbf{x}_t)$ を用いて、マスクされたトークンを予測
-- 推論時の手順:
+- 推論時の手順
   1. $\mathbf{x}_1$（全マスク）からスタート
   2. 各ステップでマスク位置のトークンを予測
-  3. 予測の確信度が高いものから順にマスクを解除 (**remasking**)
+  3. 予測トークンを一度サンプルした後、次の時刻に合わせて一部を再マスク (**remasking**)
+    - 低確信度のトークンほど再マスクされやすい（後のステップで修正の余地を残す）
   4. $T$ ステップ後に完全なテキスト $\mathbf{x}_0$ を得る
-- remaskingにより、低確信度の予測を後のステップで修正可能
 
 ---
 
-# メカニズム: 目的関数 (ELBO)
+# メカニズム: 目的関数 (NLL上界の最小化)
 
-- 変分下界 (ELBO) を最大化:
+$$
+\mathcal{L} (\theta) = - \mathbb{E}_{t, x_0, x_t} \left[ \frac{1}{t} \sum_{i=1} \mathbf{1} [x_t^i = \text{M}] \log p_\theta(x_0^i | \mathbf{x}_t) \right]
+$$
 
-$$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left[ \frac{1}{t} \sum_{i: x_t^i = [\text{MASK}]} \log p_\theta(x_0^i | \mathbf{x}_t) \right]$$
+各項の役割
 
-- 各項の役割:
-  - $\frac{1}{t}$: マスク率が低い（ほぼ完成に近い）ステップほど重みが大きい
-  - $\sum_{i: x_t^i = [\text{MASK}]}$: マスクされた位置のみを予測対象とする
-  - $\log p_\theta(x_0^i | \mathbf{x}_t)$: 各マスク位置の交差エントロピー損失
-- ARMの次トークン予測損失の自然な拡張とみなせる
+- $\frac{1}{t}$: マスク率が低い（ほぼ完成に近い）ステップほど重みが大きい
+- $\mathbf{1}[x_t^i = \text{M}]$: マスクされた位置のみを予測対象とする
+- $\log p_\theta(x_0^i | \mathbf{x}_t)$: 各マスク位置の交差エントロピー損失
+
+ARMの次トークン予測損失の自然な拡張とみなせる
 
 ---
 
 # メカニズム: アーキテクチャ
 
-- Transformer をバックボーンとして使用（LLaMA と同様の構造）
-  - **双方向 attention** を採用（ARMの causal mask は使わない）
-  - RMSNorm、SwiGLU、RoPE などの標準的なコンポーネントを利用
-- モデルサイズ: 0.04B / 0.1B / 0.4B / 1.1B / **8B** の5段階で検証
-- 学習データ: 2.3Tトークン (英語・中国語・コード)
+- LLaMAと同様Transformerをバックボーンとして使用
+  - multi-head attention を採用（ARMの causal mask は使わない）
+- モデルサイズ: 1B / 8B の2段階で検証
+- 学習データ: 2.3Tトークン (英語・中国語・コード)で事前学習
 
 ---
 
 # 実験結果: スケーラビリティ
 
 - FLOPsの増加に伴い、LLaDAの性能はARMベースラインと同様のスケーリング則に従う
-- MMLU、ARC-C、PIQA 等の一般タスクでは同等のスケーリング傾向
-- GSM8K、HumanEval ではARMに比べやや劣るが、スケールに伴い改善傾向
+- MMLU、GSM8Kで特に高いscalability
+- 比較的ARMに劣るPIQAでもスケールに伴い改善傾向
 
 ![スケーラビリティ](figures/scalability_of_llada.png)
 
@@ -100,8 +102,8 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 
 # 実験結果: 事前学習モデルのベンチマーク
 
-- LLaDA 8B は MMLU (65.9)、TruthfulQA (46.1)、Math (31.4) で **LLaMA3 8B を上回る**
-- CMMLU (69.9)、C-Eval (70.5) の中国語タスクでも最高スコア
+- LLaDA 8B Base は MMLU (65.9)、TruthfulQA (46.1)、Math (31.4) などで **LLaMA3 8B を上回る**
+- CMMLU (69.9)、C-Eval (70.5) の中国語タスクで最高スコア
 - HumanEval-FIM (73.8) で fill-in-the-middle タスクに特に強い（双方向モデリングの恩恵）
 
 ![事前学習モデルのベンチマーク結果](figures/benchmark_results_of_pre_trained_llms.png)
@@ -111,9 +113,10 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 
 # 実験結果: 事後学習モデルのベンチマーク
 
-- SFTのみ (4.5Mペア、RLなし) でも多くのタスクで競争力のある性能
-- ARC-C (88.5) で全モデル中最高スコアを達成
+- SFTのみ (4.5Mペア、RLなし) ではほとんどの下流タスクで性能改善
+- ARC-C (88.5) で全モデル中最高スコア
 - GPQA (33.3)、Math (31.9) で LLaMA3 8B Instruct を上回る
+- MMLU は低下するおり、SFTデータ品質が最適でない可能性が示唆されている
 
 ![事後学習モデルのベンチマーク結果](figures/benchmark_results_of_post_trained_llms.png)
 
@@ -122,7 +125,8 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 
 # 実験結果: 総合比較
 
-- 左: Base モデル、右: Instruct モデルのレーダーチャート - LLaDA 8B は Base・Instruct ともに LLaMA2 7B を大きく上回り、LLaMA3 8B と同等の領域に到達
+- 左: Base モデル、右: Instruct モデルのレーダーチャート 
+- LLaDA 8B は Base・Instruct ともに LLaMA2 7B を大きく上回り、LLaMA3 8B と同等
 
 ![Zero/Few-shot ベンチマーク総合比較](figures/zero_few-shot_benchmarks.png)
 
@@ -142,8 +146,8 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 
 # 実験結果: サンプリング過程の可視化
 
-- 数学問題に対し、複数ステップで徐々にトークンが確定していく様子
-- マルチターン対話も適切に処理可能（翻訳、詩の生成など）
+- 数学問題に対し、複数ステップで徐々にトークンが確定していく様子(暗いほど後のステップ)
+- マルチターンの対話も適切に処理可能（翻訳、詩の生成など）
 
 ![サンプリング過程とマルチターン対話の例](figures/visualization_of_the_sampling_process_and_a_generated_multi_round_dialogue.png)
 
@@ -152,10 +156,11 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 
 # 制限事項
 
-- **生成長の事前指定が必要**: 出力トークン数をユーザーが指定する必要があり、適応的な長さ決定機構がない
+- **生成長の事前指定が必要**: 生成長をハイパーパラメータとして与える必要があり、適応的な長さ決定機構がない
+  - ただし可変長データで学習しており、設定した長さへの感度は大きくない（生成後にEOS以降を破棄できる）
 - **計算リソースの制約**: 最先端ARMと同規模 (70B以上) へのスケーリングは未検証
-- **推論効率**: MDM専用の attention 機構や KV キャッシュ等の最適化が未導入
-  - ARMでは標準的な KV キャッシュが使えるが、双方向 attention では適用困難
+- **推論効率**: MDM専用のattention機構やKV cache等の最適化が未導入
+  - 全文を同時更新するので、自己回帰みたいにprefixを固定してのcacheが効きにくい
 - **RLによる性能向上が未実施**: 既存ARMベースLLMでは SFT + RL が標準だが、MDM向けのRL手法が未確立
 - **マルチモーダル対応**: 画像・音声等への拡張は今後の課題
 - **事後学習手法の発展余地**: MDM固有の alignment 手法（RLHF/DPO相当）の開発が必要
@@ -173,3 +178,5 @@ $$\mathcal{L}_{\text{ELBO}} = \mathbb{E}_{t, q(\mathbf{x}_t|\mathbf{x}_0)} \left
 # 参考情報
 
 1. Nie, S., Zhu, F., Liang, Z., Chen, H., Li, D., Lu, Z., & Li, C. (2025). Large Language Diffusion Models. *arXiv preprint arXiv:2502.09992*.
+
+---

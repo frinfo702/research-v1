@@ -88,6 +88,7 @@ format:
 
 - Reference local images in `fig/` or `assets/` and keep filenames short.
 - Always explain what the figure shows and the takeaway.
+- Image syntax is `![caption](path)`. The text inside `[]` becomes the actual caption displayed on the slide. Use it to describe what the figure shows.
 - When a slide contains one image, Quarto auto-applies the "content with caption" layout. In this layout, the image **must come last** in the slide. Text before image works; image before text breaks rendering.
 
 ```markdown
@@ -95,13 +96,13 @@ format:
 
 - This figure shows the model architecture.
 
-![](figures/architecture.png)
+![Overview of the proposed architecture](figures/architecture.png)
 ```
 
 ```markdown
 # Bad Example (rendering breaks)
 
-![](figures/architecture.png)
+![Overview of the proposed architecture](figures/architecture.png)
 
 - This figure shows the model architecture.
 ```
