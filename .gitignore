@@ -184,7 +184,6 @@ wandb_runs/
 **/~$*.pptx
 
 # Presentation
-presentation/**/*.pptx
 presentation/_templates/~$*.pptx
 !presentation/_templates/*.pptx
 

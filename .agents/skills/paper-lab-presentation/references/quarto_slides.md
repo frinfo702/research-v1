@@ -20,9 +20,10 @@ format:
 
 ## Slide Structure
 
-- Separate slides with `---`
-- Keep one message per slide
-- Use short bullets and a single figure per slide when possible
+- Every slide title must use `#` (h1). `##` or deeper headings are NOT recognized as slide titles in Quarto Revealjs.
+- `---` can separate slides without titles, but titled slides always use `#`.
+- Keep one message per slide.
+- Use short bullets and a single figure per slide when possible.
 
 ## Example Skeleton
 
@@ -40,40 +41,40 @@ format:
 
 ---
 
-## Problem
+# Problem
 
 - Why this problem matters
 - What fails in prior work
 
 ---
 
-## Key Idea
+# Key Idea
 
 - One sentence idea
 - Diagram or equation intuition
 
 ---
 
-## Method
+# Method
 
 - Short algorithm steps
 
 ---
 
-## Experiments
+# Experiments
 
 - Dataset, metric, baseline
 - Main result
 
 ---
 
-## Limitations
+# Limitations
 
 - 1-2 weaknesses
 
 ---
 
-## Takeaway
+# Takeaway
 
 - Restate the one-line takeaway
 ```
@@ -85,5 +86,22 @@ format:
 
 ## Figures
 
-- Reference local images in `fig/` or `assets/` and keep filenames short
-- Always explain what the figure shows and the takeaway
+- Reference local images in `fig/` or `assets/` and keep filenames short.
+- Always explain what the figure shows and the takeaway.
+- When a slide contains one image, Quarto auto-applies the "content with caption" layout. In this layout, the image **must come last** in the slide. Text before image works; image before text breaks rendering.
+
+```markdown
+# Good Example
+
+- This figure shows the model architecture.
+
+![](figures/architecture.png)
+```
+
+```markdown
+# Bad Example (rendering breaks)
+
+![](figures/architecture.png)
+
+- This figure shows the model architecture.
+```
