@@ -3,8 +3,8 @@ title: "LLaDA (Large Language Diffusion Models)"
 subtitle: "拡散モデルによる大規模言語モデルの新パラダイム"
 author: "後藤 健一郎"
 lang: ja
-format: 
-  pptx: 
+format:
+  pptx:
     reference-doc: ../../templates/pptx/plain_template.pptx
 ---
 
@@ -22,7 +22,7 @@ format:
 # 新規性
 
 - **離散的なマスク拡散モデル (Masked Diffusion Model; MDM)** を8Bパラメータまでスケール
-  - 2.3Tトークンで事前学習し、各種ベンチマークで **LLaMA3 8B に匹敵する性能** 
+  - 2.3Tトークンで事前学習し、各種ベンチマークで **LLaMA3 8B に匹敵する性能**
 - 拡散モデルの特性を活かした強みを実証
   - **双方向モデリング**: 文脈の前後を同時に考慮した生成が可能
   - **頑健性の向上**: ARMが苦手とする逆順テキスト生成 (Reversal) タスクで GPT-4o や Qwen2.5 を上回る
@@ -125,7 +125,7 @@ ARMの次トークン予測損失の自然な拡張とみなせる
 
 # 実験結果: 総合比較
 
-- 左: Base モデル、右: Instruct モデルのレーダーチャート 
+- 左: Base モデル、右: Instruct モデルのレーダーチャート
 - LLaDA 8B は Base・Instruct ともに LLaMA2 7B を大きく上回り、LLaMA3 8B と同等
 
 ![Zero/Few-shot ベンチマーク総合比較](figures/zero_few-shot_benchmarks.png)
