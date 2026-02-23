@@ -46,7 +46,7 @@ Every presentation must address these four questions explicitly:
 
 3. Build a story arc.
    - Use internally: Problem, Gap, Idea, How, Evidence, Limits, Takeaway.
-   - These labels are for planning only. Slide titles must be audience-facing and descriptive, not meta labels like "How (1)" or "1スライドでまとめ".
+   - These labels are for planning only. Final slide titles must follow the mandatory fixed-category format above.
    - Append section mapping in parentheses to each slide title per the mandatory rule above.
 
 4. Handle equations.
@@ -67,10 +67,13 @@ Every presentation must address these four questions explicitly:
 All output must be in Japanese. Follow these rules strictly:
 
 - Write in plain, natural Japanese sentences. Do not compress vocabulary or omit particles and adverbs for brevity. Write as a human would speak.
+- Keep tone polite and use decisive sentence endings with `〜する` as default instead of `〜します` / `〜です`.
+- When a harder formal tone is needed, prefer sentence-final nominal style (体言止め) over repeated `〜である`.
 - Do not over-use markdown formatting. Avoid excessive bold, nested lists, or decorative headers. A flat, readable structure is preferred. Use bold only when truly necessary for emphasis.
 - Prefer full sentences over noun-phrase bullet fragments. "この手法はXを仮定している" is better than "仮定: X".
 - Do not produce "translation-style" output that mirrors the English paper sentence by sentence. Restructure into claim, evidence, implication.
 - Keep technical terms in their original English where that is the convention in the field (e.g., "attention mechanism", "ablation study"), but write the surrounding explanation in natural Japanese.
+- Use bullet points as the default output structure for slide outlines, notes, and Q&A prep.
 
 ## Output Formats
 
