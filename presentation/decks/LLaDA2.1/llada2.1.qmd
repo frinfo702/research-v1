@@ -9,181 +9,209 @@ format:
 
 # 問題設定 (1)
 
-- 離散拡散型のLLMは並列デコードで高速化できる一方、従来の absorbing-state（`[MASK]` から確定トークンへの単方向遷移）では、誤りが一度入ると修正しにくいという構造的な弱点がある
-- 並列生成ではトークン間の不整合が局所的に増幅しやすく、速度を上げるほど品質が落ちるというトレードオフが支配的だった
-- この論文の目的は、このトレードオフを制御可能にすること
+- LLM推論の主流は **Autoregressive (AR)** デコーディング：1トークンずつ逐次生成
+- **Discrete Diffusion LM (dLLM)** はマスクを並列に予測することで高速化を目指す
+- しかし dLLM は **速度と品質のトレードオフ** を抱えている
+  - ステップ数を増やすと品質は AR 並みだが速度優位が消える
+  - ステップを減らすと品質が劣化する
+
+**本論文の問いかけ：このトレードオフを根本から解消できるか？**
 
 
 ---
 
-# モチベーション (2)
+# モチベーション (1)
 
-- dLLM は理論上並列デコードで高速化できるが、ステップ数を減らすほど品質が落ちるため速度と品質を同時に上げることが難しい
-- 従来の研究は confidence-based remasking や外部ガイド導入で品質を補おうとしたが、「一度確定したトークンを書き直せない」という遷移ルール自体は変わっていない
-- この論文の問い：デコード中にトークンを編集できるようにすれば、速度と品質のバランスを運用者が選べるのではないか
-- 編集可能な遷移を設計することで、速度優先と品質優先を同一モデルで切り替えられる仕組みを目指している
+**現在の Mask-to-Token (M2T) デコーディングの3つの問題**
+
+1. **Exposure Bias**：訓練はきれいなマスク列に対して行われるが、推論では部分的に予測済みのノイジーな列を受け取る → エラーが蓄積する
+2. **Stuttering（n-gram反復）**：位置ごとに独立にサンプリングするため、同じトークンが繰り返されやすい
+3. **修正不可能性**：一度配置したトークンは後から訂正できない
+
+→ 既存手法（ReMDM, Prophet など）は訓練なしのパッチ適用にとどまり、根本解決になっていない
+
 
 ---
 
 # 先行研究 (1)
 
-- 先行の dLLM 改良はconfidence-based remasking, 外部ガイドモデル導入などで品質を改善してきたが、推論過程の基本遷移は「`[MASK]` を埋めるだけ」の枠内に留まっていた。
-- 結果として、誤生成を後段で積極的に書き換える機構は弱く、速度と品質の両立を維持しにくい問題
+| 手法 | 特徴 | 限界 |
+|------|------|------|
+| LLaDA (2025.02) | dLLM 8B、AR と同等品質 | ステップ数 = 応答長が必要 |
+| LLaDA2.0 (2025.12) | 100B MoE に拡張 | M2T のまま、速度問題は未解決 |
+| ReMDM / Prophet | 低信頼度トークンの再マスク | 訓練なしパッチ、100B 未検証 |
 
+**共通の課題**：一度置いたトークンを **書き換える** 訓練目的関数が存在しない
 
 ---
 
 # 新規性 (1)
 
-**二重閾値で M2T と T2T を同時運用する editable decoding を導入し、dLLM の速度品質トレードオフを運用時に再構成できるように**
-- Draft-and-Edit という編集可能デコードを設計し、S Mode と Q Mode を同一モデル上で切り替え可能にしました。
-- CPT/SFT/RL まで一貫して M2T と T2T の混合学習を適用し、編集能力を学習目標として内在化しました。
-- LLaDA2.1-Flash（100B）と LLaDA2.1-Mini（16B）で、33ベンチマークにおける品質とTPSの実測を提示しました。
+**LLaDA2.1 の貢献（1文で）**
+
+> 既に確定したトークンを推論中に書き直す **Token Editing** の訓練目的を導入し、速度と品質を同時に改善した最初の大規模 dLLM
+
+**3つの貢献**
+
+1. **Draft-and-Edit パラダイム**：M2T 展開とトークン上書きを同一ステップで実行
+2. **統一訓練目的（M2T + T2T）**：書き直しを学習させる新しい目的関数と Multi-turn Forward (MTF) データ拡張
+3. **EBPO**：dLLM スケール（100B）で初めて成功した RL フレームワーク
 
 
 ---
 
-# アイデア (2)
+# アイデア (3.1)
 
-- まず高速に草案を生成し、次に同じデコード過程で誤りを編集する
-- 編集を許すことで、初期ステップの高速・低品質な生成を後段で回収できる
-- S Mode：低めの `τ_mask` で速度を優先し、T2T 編集で品質を整える
-- Q Mode：保守的な閾値で品質を優先する
+**Token Editing の直感**
 
-![M2TとT2Tを統合した編集可能デコードの概要](figures/llada2_editable_mask_to_token_modes_overview.png)
+従来のM2Tデコーディング：`[MASK]` → トークン（一方向、不可逆）
 
+LLaDA2.1 のデコーディング：各ステップで **2種類の更新集合** を動的に決定
 
----
+- **Unmasking Set $\Gamma_t$**：信頼度 $\tau_{\text{mask}}$ を超えた `[MASK]` 位置を確定
+- **Editing Set $\Delta_t$**：すでに確定済みだが、モデルの予測が現トークンと **異なり**、かつ信頼度 $\tau_{\text{edit}}$ を超えた位置を上書き
 
-# 提案手法 (2)
+$$\text{更新位置} = \Gamma_t \cup \Delta_t$$
 
-時刻 `t` で予測上位トークンを `v_t^i = argmax_v p_\theta(v | x_t)` とすると、更新対象は次の2集合で定義されます。
+→ 並列展開しながら自己訂正が可能になる
 
-$$
-\Gamma_t = \{ i \mid x_t^i = [MASK],\ p_\theta(v_t^i \mid x_t) > \tau_{mask} \}
-$$
-
-$$
-\Delta_t = \{ i \mid x_t^i \neq v_t^i,\ p_\theta(v_t^i \mid x_t) > \tau_{edit} \}
-$$
-
-$$
-x_{t-1}^i =
-\begin{cases}
-v_t^i & \text{if } i \in \Gamma_t \cup \Delta_t \\
-x_t^i & \text{otherwise}
-\end{cases}
-$$
-
-- `Γ_t`：未確定箇所（MASK）を確定する集合
-- `Δ_t`：既出トークンを再編集する集合
-- 従来との差は `Δ_t` を明示的に持つことで、誤り修正を遷移ルールに組み込んだ点
+![Editable Mask-to-Token と Token Editing の比較（Figure 1）](figures/llada2_editable_mask_to_token_modes_overview.png){width=92%}
 
 
 ---
 
-# 方法：混合学習でDraftとEditを同時に育てる (3.1)
+# 提案手法：訓練 (3.2)
 
-- 推論で Draft-and-Edit を使う以上、学習でも M2T と T2T を同時に見せる必要がある
-- CPT と SFT の両方で Mixture of M2T and T2T objective を使い、生成能力と修正能力を同一パラメータ空間で整合させる
-- さらに Multi-turn Forward（MTF）で編集シナリオの多様性を増やし、後段編集に必要な頑健性を持たせる
+**2ストリームの統一訓練目的**
 
-![学習と推論を接続するLLaDA2.1の全体パイプライン](figures/llada2_stage1_cpt_pipeline_overview.png)
+- **M2T ストリーム**：従来通り、マスクから正しいトークンを生成（初稿作成能力）
+- **T2T ストリーム**：ランダム置換でノイズを与えた入力から正しいトークンを復元（自己訂正能力）
 
+**Multi-turn Forward (MTF) データ拡張**
 
----
+訓練中に「中間編集状態」のシーケンスを生成し、多様な (初稿, 修正目標) ペアを学習 → 実際の推論過程に近い状況に対処できるようにする
 
-# 方法：EBPOでdLLMのRLを安定化する (3.2)
+→ アーキテクチャの変更は **不要**。訓練目的の変更だけで実現
 
-- dLLM の RL では系列尤度 `log π_θ(x)` の扱いが難しく、分散と計算量がボトルネックになる
-- ELBO を代理目的に使う EBPO を採用し、ベクトル化した尤度推定で長文でも更新可能にした
-
-$$
-J_{\mathrm{EBPO}}(\theta)=\mathbb{E}\left[\min\left(\rho\hat{A},\ \mathrm{clip}(\rho,1-\epsilon_{low},1+\epsilon_{high})\hat{A}\right)\right]
-$$
-
-- PPO 型の比率クリップを保ちながら、dLLM 向けに尤度推定を実装可能な形へ落とし込んでいる
+![LLaDA2.1 の学習・推論フレームワーク（Figure 2）](figures/llada2_stage1_cpt_pipeline_overview.png)
 
 
 ---
 
-# 方法：推論基盤最適化で高TPSを実現する (4.2)
+# 提案手法：推論とRL (3.3–3.4)
 
-- カスタム SGLang による dLLM 推論実装
-- Alpha-MoE megakernel で FusedMoE を統合
-- per-block FP8 quantization で速度と精度のバランスを調整
-- block-wise causal masked attention、radix caching、batching 対応で長文推論を高速化
+| モード | $\tau_{\text{mask}}$ | 特性 | 向いているタスク |
+|--------|---------------------|------|-----------------|
+| S Mode（Speedy） | 低め（積極的展開） | 高スループット、T2T 訂正に依存 | コード生成、数学 |
+| Q Mode（Quality） | 高め（慎重展開） | 高品質、スループットは中程度 | 汎用、instruction following |
 
+**Multiple Block Editing (MBE)**：後続ブロックを参照して前のブロックを遡及修正 → 整合性向上、スループットと要トレードオフ
+
+**EBPO（ELBO-based Block-level Policy Optimization）**
+
+- dLLM の系列対数尤度は計算困難 → ELBO近似 + Block-Causal Masking で勾配推定を計算可能に
+- 100B 規模で RL を初めて成功させた
+
+---
+
+# 実験設定 (4)
+
+- **モデル**：LLaDA2.1-Mini (16B MoE) と LLaDA2.1-Flash (100B MoE)
+- **ベンチマーク**：33タスク
+  - 推論：GPQA, DROP, MATH
+  - コード：HumanEval+, BigCodeBench, LiveCodeBench
+  - 知識・常識：TriviaQA, PIQA, HellaSwag, C-Eval
+- **比較対象**：LLaDA2.0-Mini/Flash（直接の前身）、Ling、Qwen3（ARモデル）
+- **主要メトリクス**
+  - **TPS**（Tokens Per Second）：実時間スループット
+  - **TPF**（Tokens Per Forward pass）：1回のforward呼び出しあたりの生成トークン数（ARでは1）
+
+---
+
+# 実験結果：主要ベンチマーク（Flash） (5)
+
+- **Table 1（LLaDA2.1-Flash）** では平均スコアが
+  - LLaDA2.0-Flash: **72.43 | TPF 3.08**
+  - LLaDA2.1-Flash S Mode: **72.34 | TPF 5.93**
+  - LLaDA2.1-Flash Q Mode: **73.54 | TPF 3.64**
+- Q Mode は品質・速度の両面で LLaDA2.0-Flash を上回る（Pareto 改善）
+
+![LLaDA2.1-Flash のベンチマーク比較（Table 1）](figures/llada2_1_flash_benchmark_performance_table_1.png){width=66%}
+
+---
+
+# 実験結果：主要ベンチマーク（Mini） (5)
+
+- **Table 2（LLaDA2.1-Mini）** では平均スコアが
+  - LLaDA2.0-Mini: **63.39 | TPF 2.60**
+  - LLaDA2.1-Mini S Mode: **62.07 | TPF 5.34**
+  - LLaDA2.1-Mini Q Mode: **63.90 | TPF 3.12**
+- Mini 系列でも Q Mode は LLaDA2.0-Mini より高品質・高TPF
+
+![LLaDA2.1-Mini のベンチマーク比較（Table 2）](figures/llada2_0_mini_benchmark_performance_table_2.png){width=66%}
+
+---
+
+# 実験結果：スループット (5)
+
+**LLaDA2.1-Flash (100B, S Mode + 量子化, Table 3) の TPS**
+
+| ベンチマーク | TPS |
+|---|---|
+| HumanEval+ | 891.74 |
+| BigCodeBench-Full | 801.48 |
+| LiveCodeBench | 663.39 |
+
+**LLaDA2.1-Mini (16B, S Mode + 量子化) は最大 1586.93 TPS**
+
+- S Mode は高 TPF・高TPSを実現、ただし品質は Q Mode より低下
+- Q Mode は速度を抑える代わりに品質を最適化する設定
 
 
 ---
 
-# 実験設定 (5)
+# 実験結果：TPS 概観と量子化影響 (5)
 
-- 知識・推論・コーディング・数学・Agent/Alignment を含む33ベンチマークで評価
-- Flash（100B）と Mini（16B）をそれぞれ比較
-- 報告指標：品質スコア + dLLM 向けの `TPF`（tokens per forward）と `TPS`
-- 比較軸：S Mode と Q Mode のトレードオフ / 量子化あり・なしの速度変化 / MBE（Multiple Block Editing）有無の品質・速度差
+![Mini/Flash 系列の Tokens Per Second 比較](figures/llada2_mini_series_tokens_per_second_chart.png){width=82%}
+
+![量子化時の TPS とスコア変化（Table 3）](figures/llada2_1_quantization_throughput_score_change_table_3.png){width=82%}
+
+---
+
+# アブレーション (6)
+
+1. **MBE の効果**：推論・コードタスクでスコアが一貫して向上。スループットは微減
+2. **MTF データ拡張の効果**：除去すると S Mode の品質が顕著に低下 → 多様な編集シナリオの学習が必要
+3. **T2T ストリームの効果**：除去すると S Mode で大幅な品質劣化 → 自己訂正能力の学習が不可欠
+4. **量子化の影響**：スループット向上、コード・数学は許容範囲内。open-ended タスクは影響大
+5. **EBPO の効果**：RL 無しでは推論・instruction following スコアが低下
+
+→ **各コンポーネントが独立した貢献を持つ** ことを確認
+
+![MBE の有無による性能比較（Table 4）](figures/llada2_1_mbe_performance_comparison_table_4.png){width=82%}
 
 
 ---
 
-# 実験結果：FlashはQ Modeで平均スコアを更新する (5)
+# 制限 (1)
 
-- LLaDA2.1-Flash：`S Mode 72.34 | TPF 5.93`、`Q Mode 73.54 | TPF 3.64`
-- LLaDA2.0-Flash：`72.43 | TPF 3.08` → Q Mode で品質を上げつつ、S Mode で並列度を維持
-- 同一モデルで TPS と品質を選べることが実験で裏付けられた
-
-![Flash系列のベンチマーク比較（Table 1）](figures/llada2_1_flash_benchmark_performance_table_1.png)
-
-
----
-
-# 実験結果：Miniは運用モードで挙動が明確に分かれる (5)
-
-- LLaDA2.1-Mini：`S Mode 62.07 | TPF 5.34`、`Q Mode 63.90 | TPF 3.12`
-- LLaDA2.0-mini：`63.39 | TPF 2.60` → S Mode は並列性、Q Mode は品質回復を優先
-- スケールが下がってもモード切替の意味が残り、提案法が Flash 固有ではないことを示している
-
-![Mini系列のベンチマーク比較（Table 2）](figures/llada2_0_mini_benchmark_performance_table_2.png)
+1. **Stuttering は残存する**：T2T 編集で軽減するが、並列サンプリング由来の n-gram 繰り返しを完全には排除できない
+2. **KV キャッシュ非対応**：トークンが変化し続けるため、ARモデルのような KV キャッシュ再利用ができない。高 TPF でカバーするが、1ステップのコストは高いまま
+3. **Exposure bias は部分的な解消にとどまる**：T2T 訓練で緩和されるが、完全な解消には至らない
+4. **RL と editing の統合**：現在の EBPO は生成全体に対して報酬を与えるが、「訂正操作そのもの」への報酬設計は今後の課題
 
 
 ---
 
-# 実験結果：量子化でTPSをさらに押し上げる (5)
+# まとめ (1)
 
-- 量子化後のピークTPS：Flash が HumanEval+ で `891.74 TPS`、Mini が `1586.93 TPS`
-- 多くのベンチマークでスコアの変動は小さく、大きな TPS 改善が得られた
-- S Mode は閾値設計だけでなく、量子化と組み合わせたときに最大化される
+**LLaDA2.1 の一文要約**
 
-![量子化あり/なしでのTPSとスコア差分（Table 3）](figures/llada2_1_quantization_throughput_score_change_table_3.png)
+> Token Editing（推論中のトークン上書き）を訓練目的に組み込むことで、100B規模の dLLM において速度と品質のトレードオフを初めて Pareto 改善した
 
----
-
-# アブレーション (5)
-
-- MBE（Multiple Block Editing）を入れると、Flash/Miniともに複数ベンチマークでスコアが改善
-- 平均では Flash が `70.69 -> 72.67`、Mini が `57.63 -> 58.24`
-- 一方で `TPF` は低下し、編集回数増加に伴う速度コストが発生
-    - 局所誤りの訂正を強めるほど品質が上がるが、そのぶん計算は重くなる
-
-![MBE有無の性能比較](figures/llada2_1_mbe_performance_comparison_table_4.png)
-
-
----
-
-# 制限 (6)
-
-- 論文自身も、速度と精度のトレードオフが依然として残ることを明確に認めている
-    - TPS, 品質の同時最大化は不可能
-- 特にタスク領域ごとの性能差が大きく、最適設定は一律ではない
-
----
-
-# まとめ
-
-- dLLM のデコード遷移に T2T 編集を組み込む Draft-and-Edit を提案し、速度と品質を閾値で選べるようにした
-- M2T/T2T の混合目的を CPT・SFT・RL に一貫して適用し、編集能力をモデルに内在化している
-- 33ベンチマークで S Mode（速度優先）と Q Mode（品質優先）を同一モデルで使い分けられることを確認
-- 量子化と組み合わせることで Flash が最大 891 TPS、Mini が最大 1587 TPS を記録
-- 速度と品質のトレードオフを「なくす」のではなく「制御できるようにする」という設計判断がこの論文の核心
+| 問い | 回答 |
+|------|------|
+| **何が新しいか** | 確定済みトークンの書き直しを M2T + T2T 統一目的で学習 |
+| **何ができて何ができないか** | 高速並列生成＋自己訂正が可能。KVキャッシュ不可、stuttering 残存 |
+| **どんな条件で動くか** | コード・数学では S Mode が有効。open-ended では Q Mode 推奨 |
+| **再現に必要なこと** | $\Gamma_t$, $\Delta_t$ の定義（閾値 $\tau_{\text{mask}}, \tau_{\text{edit}}$）、MTF 拡張、EBPO 勾配推定 |
