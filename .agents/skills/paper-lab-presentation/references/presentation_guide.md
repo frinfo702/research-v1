@@ -5,7 +5,7 @@
 - Time limit and expected slide count
 - Audience expertise level
 - Required sections (background, method, experiments, related work)
-- Goal: "After this talk, the audience should be able to ___."
+- Goal: "After this talk, the audience should be able to \_\_\_."
 
 ## The Four Required Questions
 
@@ -70,9 +70,10 @@ Always convert to the pattern: claim, evidence, implication.
 5. Method details (equation intuition)
 6. Method details (architecture or algorithm)
 7. Experiment setup
-8. Main results
-9. Limitations and ablation
-10. Takeaway and Q&A
+8. Experimental results
+9. Main Result
+10. Limitations and ablation
+11. Conclusion
 
 ### 20 min / 12-15 slides
 

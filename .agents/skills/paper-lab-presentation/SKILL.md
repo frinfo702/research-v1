@@ -19,7 +19,7 @@ covers problem awareness, core ideas, and critical examination.
 
 - Presentation title must be exactly the paper title. Do not add private subtitles, taglines, or decorative prefixes/suffixes.
 - Author line must use the paper's authors, not the presenter name. If authors are many, abbreviate in a standard form (e.g., "First Author et al.").
-- Every slide title must start with one of these fixed categories only: `問題設定`, `モチベーション`, `先行研究`, `新規性`, `アイデア`, `方法`, `実験設定`, `結果`, `制限`, `アブレーション`.
+- Every slide title must start with one of these fixed categories only: `問題設定`, `モチベーション`, `先行研究`, `新規性`, `アイデア`, `提案手法`, `方法`, `実験設定`, `実験結果`, `制限`, `アブレーション`.
 - Slide title format is mandatory: `カテゴリ：短い言い切り (対応する論文の節番号)` (e.g., `結果：主要ベースラインを上回る (4.2)`).
 - The phrase after `：` must be a short decisive statement, not a question.
 - Every slide title must include, in parentheses, the corresponding source section number from the paper (e.g., `"(3)"`, `"(4.2)"`, `"(5.1)"`).
