@@ -19,6 +19,9 @@ covers problem awareness, core ideas, and critical examination.
 
 - Presentation title must be exactly the paper title. Do not add private subtitles, taglines, or decorative prefixes/suffixes.
 - Author line must use the paper's authors, not the presenter name. If authors are many, abbreviate in a standard form (e.g., "First Author et al.").
+- Every slide title must start with one of these fixed categories only: `問題設定`, `モチベーション`, `先行研究`, `新規性`, `アイデア`, `方法`, `実験設定`, `結果`, `制限`, `アブレーション`.
+- Slide title format is mandatory: `カテゴリ：短い言い切り (対応する論文の節番号)` (e.g., `結果：主要ベースラインを上回る (4.2)`).
+- The phrase after `：` must be a short decisive statement, not a question.
 - Every slide title must include, in parentheses, the corresponding source section number from the paper (e.g., `"(3)"`, `"(4.2)"`, `"(5.1)"`).
 - Section references in slide titles do not need to follow paper order. Presentation story order takes priority.
 
@@ -35,7 +38,7 @@ Every presentation must address these four questions explicitly:
 
 1. Gather constraints.
    - Ask for time limit, audience level, required depth, format (slides/notes), and output type (outline, script, Q&A).
-   - Define the explanation goal: "After this talk, the audience should be able to ___."
+   - Define the explanation goal: "After this talk, the audience should be able to \_\_\_."
 
 2. Extract the paper core.
    - Identify problem, gap, key idea, contributions, assumptions, and novelty versus prior work.
