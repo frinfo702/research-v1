@@ -83,12 +83,6 @@ The 10 min version plus:
 - Additional ablations or qualitative examples
 - Error analysis or failure cases
 
-## Q&A Prep
-
-- 3 likely weaknesses the audience might point out
-- 2 strongest evidence points to defend the paper
-- 1 extension idea or deployment scenario
-
 ## Writing Style Reminders
 
 These apply to all Japanese output:

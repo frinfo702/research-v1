@@ -4,7 +4,7 @@ description: >
   Transform rough paper notes into structured lab presentation materials.
   Use when: preparing a paper talk for lab seminar, building slide outlines
   from reading notes, converting raw paper summaries into presentation scripts,
-  creating Quarto slide decks (.qmd/.pptx), or drafting Q&A prep.
+  creating Quarto slide decks (.qmd/.pptx).
   Converts "literal-translation" style notes into a story-driven presentation
   that covers novelty, scope, conditions, and reproducibility.
 ---
@@ -37,7 +37,7 @@ Every presentation must address these four questions explicitly:
 ## Workflow
 
 1. Gather constraints.
-   - Ask for time limit, audience level, required depth, format (slides/notes), and output type (outline, script, Q&A).
+   - Ask for time limit, audience level, required depth, format (slides/notes), and output type (outline, script).
    - Define the explanation goal: "After this talk, the audience should be able to \_\_\_."
 
 2. Extract the paper core.
@@ -60,8 +60,6 @@ Every presentation must address these four questions explicitly:
 
 7. Produce output.
    - Slide outline with per-slide goal, key message, and time budget.
-   - Speaking notes or narrative summary.
-   - Q&A prep: 3 likely weaknesses, 2 strongest evidence points, 1 extension idea.
    - If requested, produce a Quarto .qmd slide deck (see references/quarto_slides.md).
 
 ## Writing Style Rules (Critical)
@@ -79,7 +77,6 @@ All output must be in Japanese. Follow these rules strictly:
 - Presentation header block containing paper-exact title and paper author list (or standard abbreviation when many).
 - Slide outline with per-slide goal, key message, and time budget.
 - Speaking notes or narrative summary.
-- Q&A prep list.
 - Quarto slide deck (.qmd) when asked.
 
 ## References
