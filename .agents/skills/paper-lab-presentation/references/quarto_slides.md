@@ -10,7 +10,7 @@
 ```yaml
 ---
 title: "Talk Title"
-author: "Your Name"
+author: "Author Name"
 format:
   revealjs:
     slide-number: true
@@ -81,7 +81,6 @@ format:
 
 ## Notes and Speaker Script
 
-- Add speaker notes under `::: notes` blocks
 - Keep notes concise and aligned with the slide goal
 
 ## Figures
