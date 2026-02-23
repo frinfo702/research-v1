@@ -15,6 +15,13 @@ Transform rough reading notes into a structured, story-driven lab presentation.
 Avoid Japanese-translation-style bullet lists. Instead, produce a narrative that
 covers problem awareness, core ideas, and critical examination.
 
+## Metadata and Slide Title Rules (Mandatory)
+
+- Presentation title must be exactly the paper title. Do not add private subtitles, taglines, or decorative prefixes/suffixes.
+- Author line must use the paper's authors, not the presenter name. If authors are many, abbreviate in a standard form (e.g., "First Author et al.").
+- Every slide title must include, in parentheses, the corresponding source section number from the paper (e.g., `"(3)"`, `"(4.2)"`, `"(5.1)"`).
+- Section references in slide titles do not need to follow paper order. Presentation story order takes priority.
+
 ## Required Output Sections
 
 Every presentation must address these four questions explicitly:
@@ -37,6 +44,7 @@ Every presentation must address these four questions explicitly:
 3. Build a story arc.
    - Use internally: Problem, Gap, Idea, How, Evidence, Limits, Takeaway.
    - These labels are for planning only. Slide titles must be audience-facing and descriptive, not meta labels like "How (1)" or "1スライドでまとめ".
+   - Append section mapping in parentheses to each slide title per the mandatory rule above.
 
 4. Handle equations.
    - Give intuition before math. Define variables and assumptions. Show the equation. Explain why this form arises and what it enables.
@@ -65,6 +73,7 @@ All output must be in Japanese. Follow these rules strictly:
 
 ## Output Formats
 
+- Presentation header block containing paper-exact title and paper author list (or standard abbreviation when many).
 - Slide outline with per-slide goal, key message, and time budget.
 - Speaking notes or narrative summary.
 - Q&A prep list.
