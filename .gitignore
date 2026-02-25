@@ -193,4 +193,5 @@ presentation/templates/pptx/~$*.pptx
 
 # Hidden context for AI agent on git for protecting copyrights of papers
 .agent-docs/
+.agents/setting.local.json
 _papers/
