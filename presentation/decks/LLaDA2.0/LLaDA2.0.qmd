@@ -9,7 +9,7 @@ format:
 
 # 問題設定 (1)
 
-- 拡散型言語モデル (dLLM) は自己回帰モデル (ARM) に対する有望な代替パラダイムだが、実用規模への拡張が未実証だった
+- (Discrete) Diffusion Large Language Models (dLLM) dLLM は自己回帰モデル (ARM) に対する有望な代替パラダイムだが、実用規模への拡張が未実証だった
   - LLaDA 1.0 など既存 dLLM の最大規模は 8B止まり
   - フロンティア規模（数十B〜100B）での有効性が不明
 - ゼロから 100B の dLLM を学習するのはコスト的に非現実的
@@ -35,16 +35,17 @@ format:
 - **dLLM のスクラッチ学習**: LLaDA 1.0、MDLM、Plaid など
   - 8B 以下での有効性は示されているが、それ以上のスケールは未検証
 - **AR 初期化からの変換**: 既存研究はごく小規模（数百M〜1B）に留まる
-  - 本研究は変換の対象を **16B・100B MoE** まで拡張する初の試み
-- **dLLM の事後学習**: SFT 相当の手法は一部提案されているが、DPO 等の preference alignment は未開拓
+  - 本研究は変換の対象を **16B・100B** まで拡張する初の試み
+- **dLLM の事後学習**: SFT 相当の手法は一部提案されているが、DPO 等の preference alignment は開拓の余地あり
 
 ---
 
 # 新規性 (3)
 
-LLaDA 2.0 の新規性は一言で言えば、**既存の ARM チェックポイントを安定的に dLLM へ変換するための 3 段階 WSD 学習スキームの確立**である。加えて以下の技術的貢献が組み合わさっている。
+既存の ARM チェックポイントを安定的に dLLM へ変換するための 3 段階の学習スキーム (WSD) を確立
+加えて以下の技術的貢献が組み合わさっている。
 
-- **3 段階 WSD (Warmup-Stable-Decay) 変換戦略** — ブロックサイズを段階的に拡大・縮小し、ARM から dLLM へ知識を引き継ぐ
+- **WSD (Warmup-Stable-Decay) Strategy** — ブロックサイズを段階的に拡大・縮小し、ARM から dLLM へ知識を引き継ぐ
 - **Document-level Attention Mask** — 複数文書パッキング時の文書間情報漏洩を防ぐ
 - **Top-k Checkpoint Merging** — 上位 k チェックポイントのパラメータ平均化で汎化性能を安定させる
 - **CAP (Confidence-Aware Parallel) Training** — 並列デコード品質を落とさずに推論を高速化
@@ -52,23 +53,22 @@ LLaDA 2.0 の新規性は一言で言えば、**既存の ARM チェックポイ
 
 ---
 
-# アイデア：WSD 変換戦略 (4.1)
+# アイデア：WSD Strategy (4.1)
 
-ARM チェックポイントは「ブロックサイズ=1 の Block Diffusion LM」と解釈できる。ここからブロックサイズを段階的に拡大・縮小することで ARM → dLLM の変換を実現する。
+ARM チェックポイントは「ブロックサイズ=1 の Block Diffusion LM」と解釈できる。
+ここからブロックサイズを段階的に拡大・縮小することで ARM → dLLM の変換を実現する。
 
-**Warmup フェーズ**: ブロックサイズを 1 → 4 → 32 → 64 → 4096 と段階的に拡大
-  - ARM の知識を保ちながら双方向 attention の能力を徐々に獲得
-
-**Stable フェーズ**: ブロックサイズを 4096（全系列長）に固定
-  - 標準的な Masked Diffusion LM (MDLM) として大規模データで学習
-  - Causal attention 部分を廃棄し計算効率を向上
-
-**Decay フェーズ**: ブロックサイズを 4096 → 2048 → 32 と段階的に縮小
-  - 推論効率に最適化された compact なブロック拡散モデルへ収束
+- Warmup フェーズ: ブロックサイズを 1 → 4 → 32 → 64 → 4096 と段階的に拡大
+    - ARM の知識を保ちながら双方向 attention の能力を徐々に獲得
+- Stable フェーズ: ブロックサイズを 4096（全系列長）に固定
+    - 標準的な Masked Diffusion LM (MDLM) として大規模データで学習
+    - Causal attention 部分を廃棄し計算効率を向上
+- Decay フェーズ: ブロックサイズを 4096 → 2048 → 32 と段階的に縮小
+    - 推論効率に最適化された compact なブロック拡散モデルへ収束
 
 ---
 
-# アイデア：WSD 変換戦略 (4.1)
+# アイデア：WSD Strategy (4.1)
 
 ![WSD を含む progressive training framework](figures/fig2_progressive_training_framework.png){width=60%}
 
@@ -76,7 +76,7 @@ ARM チェックポイントは「ブロックサイズ=1 の Block Diffusion LM
 
 # 提案手法：学習目的関数 (4.1)
 
-**Block Diffusion LM の損失関数**
+**Block Diffusion Language Models (BDLM) の損失関数**
 
 $$
 \mathcal{L}_{\text{BDLM}}(\theta) = -\mathbb{E}\left[\frac{\alpha'_t}{1 - \alpha_t} \sum_k^K \sum_i^{L_B} \mathbf{1}[x_{t,k}^i = \text{[MASK]}] \log p_\theta(x_{0,k}^i \mid x_{0,<k},\ x_{t,k})\right]
@@ -89,7 +89,7 @@ $$
 - $K$: ブロック数 ($= L_{\text{total}} / L_B$)
 - $\alpha_t$: ノイズスケジュールパラメータ
 
-Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標準 MDLM の目的関数に帰着する。
+Stable フェーズでは $K=1$（全系列が 1 ブロック）となり、標準的な MDLM の目的関数に帰着
 
 ---
 
@@ -105,7 +105,7 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 
 - WSD 事前学習後、validation perplexity 上位 $k$ チェックポイントを選択
 - それらのパラメータを算術平均でマージ
-- 事後学習への初期化として、単一ベストチェックポイントより安定した性能を示す
+- 事後学習への初期化として、単一ベストチェックポイントやEMAより安定した性能を示す
 
 ---
 
@@ -121,8 +121,17 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 - 正解予測トークンの確信度を高める補助損失 $\lambda \cdot \mathcal{L}_{\text{conf}}$ を SFT 損失に加算
 - 推論時に複数トークンを並列デコードしても品質が劣化しにくくなる
 
+---
+
+# 提案手法：事後学習 (5.1–5.3)
 **Adapted DPO (5.3)**
 
+$$
+\mathcal{L}_{DPO} =  -\mathbb{E}\left[ \log \sigma(\beta\left[ \Delta \mathbf{B}(\mathbf{x}_\omega | \mathbf{c}) - \Delta \mathbf{B}(\mathbf{x}_l | \mathbf{c})\right])\right]
+$$
+
+- $\Delta \mathbf{B}(\mathbf{x}|\mathbf{c}) = B_{BDLM}(\theta, \mathbf{x}|\mathbf{c}) - B_{BDLM}(\theta_{ref}, \mathbf{x}|\mathbf{c})$
+- $\beta$: ハイパラ(0.1)
 - ARM 向け DPO は系列の正確な対数尤度を必要とするが、拡散モデルでは計算不可
 - 対数尤度を **ELBO** で置き換えることで preference alignment を実現
 - 約 150 万の preference ペアで学習
@@ -134,11 +143,11 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 - **ベースモデル**: InclusionAI の ARM MoE チェックポイント Ling-mini-2.0 (16B) と Ling-flash-2.0 (100B)
   - いずれも 20T トークン超で事前学習済み
 - **評価ベンチマーク**: 5 次元 47 タスク
-  - Knowledge (10): MMLU, C-EVAL, GPQA, ARC など
-  - Reasoning (12): BBH, HellaSwag, SQuAD 2.0 など
-  - Coding (13): HumanEval, MBPP, MultiPL-E, LiveCodeBench など
-  - Math (8): GSM8K, MATH, OlympiadBench, AIME 2025 など
-  - Agent & Alignment (4): BFCL v3, IFEval, CodeIF-Bench, Nexus
+    - Knowledge (10): MMLU, C-EVAL, GPQA, ARC など
+    - Reasoning (12): BBH, HellaSwag, SQuAD 2.0 など
+    - Coding (13): HumanEval, MBPP, MultiPL-E, LiveCodeBench など
+    - Math (8): GSM8K, MATH, OlympiadBench, AIME 2025 など
+    - Agent & Alignment (4): BFCL v3, IFEval, CodeIF-Bench, Nexus
 - **比較対象**: Qwen3-8B (mini 比較)、Qwen3-30B-A3B (flash 比較)
 
 ---
@@ -151,7 +160,7 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 - 総パラメータ 16B、実活性化は **約 1.4B のみ**にもかかわらず Qwen3-8B（8B dense）を平均スコアで上回る
 - Coding と一部 Reasoning ベンチで優位
 
-![LLaDA2.0-mini のベンチマーク](figures/table1_llada2_mini_benchmark_performance.png){width=80%}
+![LLaDA2.0-mini のベンチマーク](figures/table1_llada2_mini_benchmark_performance.png)
 
 ---
 
@@ -163,19 +172,19 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 - 100B 総パラメータ（実活性化 約 6.1B）で、全 47 タスク平均では Qwen3-30B-A3B に **0.42 pt** 届かない
 - Coding（HumanEval, MBPP, MultiPL-E）と Agent（BFCL v3）で一貫して上回る
 
-![LLaDA2.0-flash の主要ベンチマーク結果](figures/fig1_llada2_flash_main_results.png){width=82%}
+![LLaDA2.0-flash の主要ベンチマーク結果](figures/fig1_llada2_flash_main_results.png)
 
 ---
 
 # 実験結果：LLaDA2.0-flash 詳細表 (6.2)
 
-![LLaDA2.0-flash の詳細ベンチマーク表](figures/table2_llada2_flash_benchmark_performance.png){width=78%}
+![LLaDA2.0-flash の詳細ベンチマーク](figures/table2_llada2_flash_benchmark_performance.png)
 
 ---
 
 # 実験結果：推論速度 (6.3)
 
-8×H20 GPU (TP8) 上での throughput 比較。
+8×H20 GPU (TP8) 上での throughput の比較
 
 - LLaDA2.0-flash-CAP: **535 TPS**（構造化タスクで最大 935 TPS）
 - LLaDA2.0-flash（標準）: 383 TPS
@@ -212,14 +221,14 @@ Stable フェーズでは $k=1$（全系列が 1 ブロック）となり、標�
 # 今後の方向性（8）
 
 - 100B を超えるスケールへの拡張
-- 拡散モデル向けの強化学習・テスト時推論（test-time thinking）
+- 拡散モデル向けの強化学習手法の確立 (LLaDA2.1)・テスト時推論（test-time thinking）
 - 64k 以上のコンテキスト長拡張
 
 ---
 
 # まとめ
 
-- LLaDA 2.0 は **ARM チェックポイントから dLLM へ変換する WSD 戦略**を確立し、拡散型言語モデルを初めて 100B 規模へ到達させた
+- LLaDA 2.0 は **ARM チェックポイントから dLLM へ変換する WSD Strategy**を確立し、dLLMを初めて 100B 規模へ到達させた
 - LLaDA2.0-mini (16B) は Qwen3-8B を平均で上回り、LLaDA2.0-flash (100B) は Qwen3-30B-A3B に平均 **0.42 pt** 差まで迫る
 - CAP Training と専用推論エンジンの組み合わせで、同規模 ARM に対して **2.1 倍の推論速度**を実現
 - dLLM がフロンティアスケールでも実用的な選択肢となり得ることを初めて実証した
