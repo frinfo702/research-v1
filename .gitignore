@@ -195,3 +195,6 @@ presentation/templates/pptx/~$*.pptx
 .agent-docs/
 .agents/setting.local.json
 _papers/
+
+nishimura_ijcnn2026_final/
+.obsidian/
