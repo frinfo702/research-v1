@@ -7,7 +7,7 @@ format:
     reference-doc: ../../templates/pptx/plain_template.pptx
 ---
 
-# 問題設定 (1)
+# dLLM は依然として速度と品質の両立が難しい ref #1
 
 - LLM推論の主流は **Autoregressive (AR)** デコーディング：1トークンずつ逐次生成
 - **Discrete Diffusion LM (dLLM)** はマスクを並列に予測することで高速化を目指す
@@ -19,7 +19,7 @@ format:
 
 ---
 
-# モチベーション (2)
+# Exposure bias が並列デコードの失敗を固定化する ref #2
 
 **LLaDA2.0で採用された Mask-to-Token (M2T) デコーディングの3つの問題**
 
@@ -32,7 +32,7 @@ format:
 
 ---
 
-# 先行研究 (2)
+# 既存手法には「確定トークンの書き換え」を学習する目的がない ref #1
 
 **共通の課題**：一度置いたトークンを **書き換える** 学習の目的関数が存在しない
 
@@ -43,7 +43,7 @@ format:
 
 ---
 
-# 新規性 (1)
+# LLaDA2.1 はスケール拡張ではなく editable decoding を導入する ref #1
 
 
 既に確定したトークンを推論中に書き直す **Token Editing** のための目的関数を導入
@@ -55,7 +55,7 @@ format:
 
 ---
 
-# アイデア (3.1)
+# Token editing により並列生成しながら自己訂正できる ref #2
 
 **Token Editing **
 
@@ -72,7 +72,7 @@ $$\text{更新位置} = \Gamma_t \cup \Delta_t$$
 
 ---
 
-# 提案手法：訓練 (3.2)
+# Mixture 学習で 1 つのモデルに drafting と editing を両立させる ref #3.1
 
 - 二つのストリームを組み合わせた目的関数
     - **M2T ストリーム**：従来通り、マスクから正しいトークンを生成（ドラフト作成能力）
@@ -87,7 +87,7 @@ $$\text{更新位置} = \Gamma_t \cup \Delta_t$$
 
 ---
 
-# 提案手法：推論とRL (3.3–3.4)
+# S/Q mode と EBPO で推論設定と RL を同時に拡張する ref #3.2, #4.3
 
 - **S Mode（Speedy）**：$\tau_{mask}$ 低め（積極的展開）→ 高スループット、T2T 訂正に依存。コード生成・数学向き
 - **Q Mode（Quality）**：$\tau_{mask}$ 高め（慎重展開）→ 高品質、スループットは中程度。汎用・instruction following 向き
@@ -101,7 +101,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 実験設定 (4)
+# 評価は 33 タスクで品質と throughput を同時に測る ref #5
 
 - **モデル**：LLaDA2.1-Mini (16B MoE) と LLaDA2.1-Flash (100B MoE)
 - **ベンチマーク**：33タスク
@@ -115,7 +115,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 実験結果：主要ベンチマーク（Flash） (5)
+# Q Mode は Flash で LLaDA2.0 を品質と TPF の両方で上回る ref #5
 
 - **LLaDA2.1-Flash** では平均スコアが
   - LLaDA2.0-Flash: **72.43 | TPF 3.08**
@@ -127,7 +127,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 実験結果：主要ベンチマーク（Mini） (5)
+# Q Mode は Mini でも品質を改善しつつ TPF を伸ばす ref #5
 
 - **LLaDA2.1-Mini** では平均スコアが
   - LLaDA2.0-Mini: **63.39 | TPF 2.60**
@@ -139,7 +139,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 実験結果：スループット (5)
+# 量子化した S Mode は Flash で最大 891.74 TPS に達する ref #5
 
 **LLaDA2.1-Flash (100B, S Mode + 量子化, Table 3) の TPS**
 
@@ -154,13 +154,13 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 実験結果：TPS 概観 (5)
+# LLaDA2.1 は Mini/Flash の両系列で大きな速度優位を示す ref #5
 
 ![Mini/Flash 系列の Tokens Per Second 比較](figures/llada2_mini_series_tokens_per_second_chart.png)
 
 ---
 
-# アブレーション (6)
+# MBE と editing 学習は特に推論・コード性能に効く ref #5
 
 1. MBE の効果：推論・コードタスクでスコアが一貫して向上。スループットは微減
 2. MTF データ拡張の効果：除去すると S Mode の品質が顕著に低下 → 多様な編集シナリオの学習が必要
@@ -172,7 +172,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# 制限 (7)
+# Editing で改善しても stuttering と KV cache 制約は残る ref #6
 
 1. **Stuttering は残る**：T2T 編集で軽減するが、並列サンプリング由来の n-gram 繰り返しを完全には排除できない
 2. **KV キャッシュ非対応**：トークンが変化し続けるため、ARモデルのような KV キャッシュ再利用ができない。高 TPF でカバーするが、1ステップのコストは高いまま
@@ -181,7 +181,7 @@ ELBO-based Block-level Policy Optimization (EBPO)
 
 ---
 
-# まとめ (7)
+# Token editing により速度と品質のトレードオフは「固定」から「調整可能」になる ref #6
 
 Token Editing（推論中のトークン上書き）を訓練目的に組み込むことで、100B規模の dLLM において速度と品質のトレードオフの関係を改善した
 
