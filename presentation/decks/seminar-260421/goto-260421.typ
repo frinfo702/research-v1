@@ -45,6 +45,7 @@
     [
       #figure(
         image("images/The-segmentation-results-comparison-of-the-closevocabulary-and-open-vocabulary.png", height: 60%),
+        let hei
         caption: [The segmentation results comparison of the closevocabulary and open-vocabulary segmentation. #footnote[https://www.researchgate.net/figure/The-segmentation-results-comparison-of-the-closevocabulary-and-open-vocabulary_fig5_390405782]],
       )
     ],
