@@ -16,7 +16,6 @@
 }
 #set page(background: image("images/presentation_background.png"))
 
-// 指定ワード数のダミーテキストを安全に生成
 #let dummy-text(words: 20) = {
   let base = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
   let arr = base.split(" ")
@@ -24,9 +23,7 @@
   arr.slice(0, end).join(" ") + "."
 }
 
-// ============================================
-// 1. タイトルスライド
-// ============================================
+// title
 #slide[
   #set align(center + horizon)
   #text(size: 36pt, weight: "bold")[Presentation Title]
@@ -36,9 +33,7 @@
   #text(size: 14pt)[Author Name • Date • Event]
 ]
 
-// ============================================
-// 2. セクション区切り（章立て）
-// ============================================
+// section title
 #slide[
   #set align(center + horizon)
   #text(size: 32pt, weight: "bold", fill: rgb("#0F4C81"))[Section Title]
@@ -46,9 +41,6 @@
   #text(size: 16pt, fill: luma(100))[Section subtitle or brief overview]
 ]
 
-// ============================================
-// 3. 左右2カラム：テキスト左 + 画像右
-// ============================================
 #slide[
   == Layout: Text Left | Image Right
   #columns(2, gutter: 2em)[
@@ -65,9 +57,6 @@
   ]
 ]
 
-// ============================================
-// 4. 左右2カラム：画像左 + テキスト右
-// ============================================
 #slide[
   == Layout: Image Left | Text Right
   #columns(2, gutter: 2em)[
@@ -86,9 +75,6 @@
   ]
 ]
 
-// ============================================
-// 5. 上下分割：画像上 + テキスト下
-// ============================================
 #slide[
   == Layout: Image Top | Text Bottom
   #figure(
@@ -104,9 +90,6 @@
   ]
 ]
 
-// ============================================
-// 6. 3カラムレイアウト
-// ============================================
 #slide[
   == Layout: Three Columns
   #grid(
@@ -133,9 +116,7 @@
   )
 ]
 
-// ============================================
-// 7. フルスクリーン画像 + テキストオーバーレイ
-// ============================================
+// fullscreen image + text overlay
 #slide[
   #box(width: 100%, height: 100%, inset: 0pt, align(center + horizon)[
     #image("images/example.png", width: 100%, height: 100%, fit: "cover")
@@ -149,9 +130,6 @@
   ]
 ]
 
-// ============================================
-// 8. 箇条書きメイン（テキスト中心）
-// ============================================
 #slide[
   == Main Points
   #v(1em)
@@ -170,11 +148,8 @@
   ]
 ]
 
-// ============================================
-// 9. コード + 説明（2カラム）
-// ============================================
 #slide[
-  == Code & Explanation
+  == Code & Explanation (2 columns)
   #columns(2, gutter: 2em)[
     #figure(
       ```python
@@ -195,9 +170,6 @@
   ]
 ]
 
-// ============================================
-// 10. 画像グリッド（2×2）
-// ============================================
 #slide[
   == Image Grid (2×2)
   #grid(
@@ -215,9 +187,7 @@
   ]
 ]
 
-// ============================================
-// 11. 引用・強調スライド
-// ============================================
+// emphasize sentence
 #slide[
   #set align(center + horizon)
   #text(size: 28pt, weight: "bold", style: "italic")[
