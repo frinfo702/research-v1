@@ -22,10 +22,11 @@
   it
 }
 #set text(font: "Hiragino Kaku Gothic ProN", size: 14pt, lang: "en")
-#set page(background: image("images/presentation_background.png"))
 
 // title
-#title-slide()
+#set page(background: image("images/blue_whale.png"))
+#title-slide()[]
+#set page(background: image("images/presentation_background.png"))
 
 = Open-Vocabulary Segmentationとは
 
@@ -152,14 +153,14 @@
 == 結果（ADE20K-150 val）(事前学習済みパラメータ)
 
 === 各設定でのmIoU
-論文とほぼ同じスコアが得られた
+論文とほぼ同じスコアが得られた。()内が論文中の数値
 #table(
   columns: (1fr, 1fr, 1fr),
   stroke: 0.5pt + luma(200),
   inset: (x: 8pt, y: 6pt),
   table.header([*Config*], [*mIoU*], [*fwIoU*]),
-  [Config A（Swin-B / ViT-L/14）], [29.58], [57.33],
-  [Config B（R-101 / ViT-B/16）], [24.87], [52.98],
+  [Config A（Swin-B / ViT-L/14）], [29.58 (29.6)], [57.33],
+  [Config B（R-101 / ViT-B/16）], [24.87 (24.8)], [52.98],
 )
 #pause
 #v(0.8em)
@@ -207,12 +208,12 @@
   [
     #image("images/0.png", fit: "cover")
     #v(0.5em)
-    #text(weight: "bold")['Oculus' 'Ululele']
+    #text(weight: "bold")['Oculus' 'Ukulele']
   ],
   [
     #image("images/1.png", fit: "cover")
     #v(0.5em)
-    #text(weight: "bold")['VR headset' 'Ululele']
+    #text(weight: "bold")['VR headset' 'Ukulele']
   ],
 )
 
